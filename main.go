@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/binary"
+	font "github.com/Nondzu/ssd1306_font"
 	"machine"
 	"time"
+	"tinygo.org/x/drivers/ssd1306"
 )
 
 const (
@@ -35,6 +37,19 @@ func main() {
 	uart1.SetBaudRate(MSPBAUD)
 	mchan := make(chan MSPMsg)
 
+	machine.I2C1.Configure(machine.I2CConfig{Frequency: 400000,
+		SDA: machine.GP26, SCL: machine.GP27})
+	dev := ssd1306.NewI2C(machine.I2C1)
+
+	dev.Configure(ssd1306.Config{Width: OLED_WIDTH, Height: OLED_HEIGHT,
+		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
+	dev.ClearBuffer()
+	dev.ClearDisplay()
+
+	oled := NewOLED(dev)
+	oled.d.Configure(font.Config{FontType: font.FONT_7x10}) //set font here
+	oled.InitScreen()
+
 	g := NewGPSUartReader(*uart0, fchan)
 	go g.UartReader()
 
@@ -48,6 +63,7 @@ func main() {
 	itimer := time.NewTimer(2 * time.Second)
 	mtimer := time.NewTimer(100 * time.Millisecond)
 	mloop := 0
+	tcount := 0
 
 	for {
 		select {
@@ -58,6 +74,7 @@ func main() {
 			mspinit = msp_INIT_INIT
 
 		case <-mtimer.C:
+			tcount += 1
 			if mspinit != msp_INIT_NONE {
 				m.MSPCommand(MSP_NAV_STATUS, nil)
 				mtimer.Reset(100 * time.Millisecond)
@@ -65,8 +82,12 @@ func main() {
 
 		case fix := <-fchan:
 			if mspinit != msp_INIT_NONE {
-				print(fix.Stamp.Format("15:04:05"))
-				print(" [", mspinit, ":", mspmode, "]")
+				ts := fix.Stamp.Format("15:04:05")
+				oled.ShowTime(ts)
+				oled.ShowGPS(uint16(fix.Sats), fix.Quality)
+				oled.ShowMode(int16(mspmode), int16(mspinit))
+				print(ts)
+				print(" [", mspmode, ":", mspinit, "]")
 				println(" Qual: ", fix.Quality, " sats: ", fix.Sats, " lat: ", fix.Lat, " lon: ", fix.Lon)
 				if fix.Quality > 0 && fix.Sats >= GPSMINSAT {
 					if mspinit == msp_INIT_INIT {
@@ -78,6 +99,7 @@ func main() {
 						if mspmode == MW_GPS_MODE_HOLD {
 							c, d := m.Followme(fix.Lat, fix.Lon, msplat, msplon)
 							println("Vehicle:", c, d)
+							oled.ShowINAVPos(uint(d), uint16(c))
 						}
 					}
 				} else {
@@ -101,6 +123,7 @@ func main() {
 					vbuf[3] = '.'
 					vbuf[4] = v.data[2] + 48
 					println("Version: ", string(vbuf))
+					oled.ShowINAVVers(string(vbuf))
 					m.MSPCommand(MSP_NAME, nil)
 
 				case MSP_NAME:
@@ -136,14 +159,17 @@ func main() {
 					alt := int16(binary.LittleEndian.Uint16(v.data[10:12]))
 					spd := float32(binary.LittleEndian.Uint16(v.data[12:14])) / 100.0
 					cog := float32(binary.LittleEndian.Uint16(v.data[14:16])) / 10.0
-					hdop := float32(99.9)
+					hdop := uint16(999)
 					if len(v.data) > 16 {
-						hdop = float32(binary.LittleEndian.Uint16(v.data[16:18])) / 100.0
+						hdop = binary.LittleEndian.Uint16(v.data[16:18])
 					}
 
-					if mloop%100 == 0 {
-						println("MSP: fix:", mfix, " sats:", msat, " lat:", msplat, " lon:", msplon,
-							" alt:", alt, " spd", spd, " cog: ", cog, " hdop:", hdop)
+					if mloop%10 == 0 {
+						oled.ShowINAVSats(uint16(msat), hdop)
+						if mloop%100 == 0 {
+							println("MSP: fix:", mfix, " sats:", msat, " lat:", msplat, " lon:", msplon,
+								" alt:", alt, " spd", spd, " cog: ", cog, " hdop:", hdop)
+						}
 					}
 					if mspinit == msp_INIT_DONE {
 						mloop += 1

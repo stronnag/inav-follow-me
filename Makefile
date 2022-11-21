@@ -1,6 +1,6 @@
 TARGET=pico
 APP=inav-follow
-SRC = main.go gpsreader.go msp.go geocalc.go prefs.go
+SRC = main.go gpsreader.go msp.go geocalc.go prefs.go oled-ssd1306.go
 
 all : $(APP).elf
 
