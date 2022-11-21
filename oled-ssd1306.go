@@ -146,26 +146,10 @@ func (o *OledDisplay) ShowINAVVers(t string) {
 	o.d.PrintText(t)
 }
 
-func (o *OledDisplay) ShowMode(imode int16, amode int16) {
+func (o *OledDisplay) ShowMode(amode int16, imode int16) {
 	o.setPos(6, 3)
 
 	var t string
-	switch imode {
-	case 0:
-		t = "None"
-	case 1:
-		t = "PH"
-	case 2:
-		t = "RTH"
-	case 3:
-		t = "WP"
-	default:
-		t = "---"
-	}
-	o.d.PrintText(t)
-	o.incX(len(t))
-	o.d.PrintText(" / ")
-	o.incX(3)
 
 	switch amode {
 	case 0:
@@ -181,6 +165,25 @@ func (o *OledDisplay) ShowMode(imode int16, amode int16) {
 	}
 	o.d.PrintText(t)
 	o.incX(len(t))
+
+	o.d.PrintText(" / ")
+	o.incX(3)
+
+	switch imode {
+	case 0:
+		t = "None"
+	case 1:
+		t = "PH"
+	case 2:
+		t = "RTH"
+	case 3:
+		t = "WP"
+	default:
+		t = "---"
+	}
+	o.d.PrintText(t)
+	o.incX(len(t))
+
 	o.cEOL()
 }
 

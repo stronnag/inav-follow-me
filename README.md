@@ -40,7 +40,7 @@ If the configuration is changed, it is necessary to rebuild the firmware.
 
 * The GPS is connected to UART0 (pins 1 & 2)
 * The MSP serial link is connected to UART1 (pins 11 & 12)
-* Optionally, the OLED is connected to I2C0 (SDA pin 6, SCL pin 7)
+* Optionally, the OLED is connected to I2C1 (SDA pin 31, SCL pin 32)
 
 These may be changed by updating the peripheral device configurations in `main.go`.
 
@@ -48,15 +48,15 @@ These may be changed by updating the peripheral device configurations in `main.g
 
 * Power up the Pico.
 * If the Pico is powered / connected via USB, then status information is provided over USB and may be viewed in any serial terminal.
-* [Future] Status data will be displayed on the OLED.
-  * When no valid data is available : "Waiting"
+* Status data will be displayed on the OLED.
+  * When no valid data is available : "Init"
   * Once GPS time is available "HH:MM:SS"
 	* GPS Quality (0/1/2), no fix, GPS fix, DGPS fix.
 	* Number of satellites
 * Once the required number of satellites is reached (`GPSMINSAT` above), then the vehicle is interrogated.
   * If the vehicle is of type `DONT_FOLLOW_TYPE` (typically FW), then follow me is not available.
   * Otherwise, navigation interrogation is started. If navigation mode `HOLD` is reported, and the distance between the vehicle and GCS is greater than `MIN_FOLLOW_DIST`, then follow me data (the required observer / GCS location) is sent to the vehicle.
-  * [Future] The "follow me" status will be displayed on the OLED.
+  * The "follow me" status will be displayed on the OLED.
   * The vehicle will only react to this data if the user has also set `GCS NAV` mode. The user may switch between normal `POSHOLD` and "Follow me" by toggling a `GCS NAV` switch on the transmitter.
 
 **Note** that as the vehicle has to be in `POSHOLD` for `GCS NAV` to work, if you experience any issues, disengaging the `GCS NAV` switch will revert to standard `POSHOLD`.
@@ -83,13 +83,32 @@ A `fl2` file may be provided (in the Release folder) with the default settings s
 
 `tinygo monitor [-port DEVICE_NODE]`
 
+### OLED
+
+It is possible to use a SSD1306 OLED to provide a clue as to what is happening.
+
+The fields are as follows:
+
+![Example](assets/oled.png)
+
+* The 1st line shows the attached GPS time
+* The 2nd line (**GPS**) shows the local GPS Status (satellites and fix type)
+* If connected to INAV, the 3rd line (**INAV**) shows the INAV Firmware version
+* The 4th line (**Mode**) shows the INAV connection status and navigation mode.
+* The 5th line (**VSat**) shows the vehicle's (INAV) satellite count and HDOP.
+* The 6th Line (**VPos**) shows the distance and bearing from the vehicle to the user.
+
+![IRL](assets/oled-fix.png)
+
+
+
 ## Caveat
 
-This application has been bench tested; it has not been flown.
+This application has been bench tested; it has not been flight tested.
 
 Running against a GPS replay and trival MSP simulator, it appears to do the right thing.
 
-Note that at the moment, there is no OLED support and copious debug output is written to any connected USB (USB serial console).
+Note that at the moment, copious debug output is written to any connected USB (USB serial console).
 
 ## Licence
 

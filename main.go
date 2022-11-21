@@ -85,9 +85,9 @@ func main() {
 				ts := fix.Stamp.Format("15:04:05")
 				oled.ShowTime(ts)
 				oled.ShowGPS(uint16(fix.Sats), fix.Quality)
-				oled.ShowMode(int16(mspmode), int16(mspinit))
+				oled.ShowMode(int16(mspinit), int16(mspmode))
 				print(ts)
-				print(" [", mspmode, ":", mspinit, "]")
+				print(" [", mspinit, ":", mspmode, "]")
 				println(" Qual: ", fix.Quality, " sats: ", fix.Sats, " lat: ", fix.Lat, " lon: ", fix.Lon)
 				if fix.Quality > 0 && fix.Sats >= GPSMINSAT {
 					if mspinit == msp_INIT_INIT {
