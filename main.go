@@ -89,7 +89,7 @@ func main() {
 			if ttick-gtick > GPS_TIMEOUT {
 				println("*** GPS timeout ***")
 				gtick = ttick
-				oled.ShowTime("??:??:??")
+				oled.ClearTime(true)
 				oled.ShowGPS(0, 0)
 				oled.ClearRow(OLED_ROW_VPOS)
 			}
@@ -114,7 +114,7 @@ func main() {
 		case fix := <-fchan:
 			if mspinit != msp_INIT_NONE {
 				gtick = ttick
-				ts := fix.Stamp.Format("15:04:05")
+				ts := fix.Stamp.Format(GPS_TIME_FORMAT)
 				oled.ShowTime(ts)
 				oled.ShowGPS(uint16(fix.Sats), fix.Quality)
 				print(ts)
@@ -176,10 +176,14 @@ func main() {
 						mspinit = msp_INIT_FAIL
 					}
 				case MSP_NAV_STATUS:
-					if mloop%100 == 0 {
+					if mspmode != v.data[0] {
+						mspmode = v.data[0]
 						println("nav status: ", mspmode)
+						if v.data[0] == 0 {
+							oled.ClearRow(OLED_ROW_VPOS)
+						}
+						oled.ShowMode(int16(mspinit), int16(mspmode))
 					}
-					mspmode = v.data[0]
 					m.MSPCommand(MSP_RAW_GPS, nil)
 
 				case MSP_RAW_GPS:

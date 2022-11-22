@@ -96,9 +96,20 @@ func (o *OledDisplay) setPos(x int, y int) {
 	}
 }
 
-func (o *OledDisplay) InitScreen() {
+func (o *OledDisplay) ClearTime(fail bool) {
+	var str string
 	o.setPos(0, OLED_ROW_TIME)
-	o.ShowTime("--:--:--")
+	o.cEOL()
+	if fail {
+		str = "??:??:??"
+	} else {
+		str = "--:--:--"
+	}
+	o.ShowTime(str)
+}
+
+func (o *OledDisplay) InitScreen() {
+	o.ClearTime(false)
 
 	o.setPos(0, OLED_ROW_GPS)
 	o.d.PrintText("GPS :")
