@@ -10,6 +10,9 @@ import (
 
 const (
 	MW_GPS_MODE_HOLD = 1
+	GPS_TIMEOUT      = 600 // (in 0.1 seconds)
+	MSP_TIMEOUT      = 600 // (in 0.1 seconds)
+	NAV_TIMEOUT      = 100 // (in 0.1 seconds)
 )
 
 const (
@@ -60,32 +63,60 @@ func main() {
 	mspmode := byte(0)
 	msplat := float32(0)
 	msplon := float32(0)
-	itimer := time.NewTimer(2 * time.Second)
-	mtimer := time.NewTimer(100 * time.Millisecond)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	mloop := 0
-	tcount := 0
+	ttick := 0
+	gtick := 0
+	mtick := 0
 
 	for {
 		select {
-		case <-itimer.C:
-			if mspinit == msp_INIT_NONE {
-				println("Initialised")
-			}
-			mspinit = msp_INIT_INIT
 
-		case <-mtimer.C:
-			tcount += 1
-			if mspinit != msp_INIT_NONE {
-				m.MSPCommand(MSP_NAV_STATUS, nil)
-				mtimer.Reset(100 * time.Millisecond)
+		case <-ticker.C:
+			ttick += 1
+
+			if mspinit == msp_INIT_NONE {
+				if ttick > 20 {
+					println("Initialised")
+					mspinit = msp_INIT_INIT
+				}
+			} else {
+				if ttick%10 == 0 {
+					oled.ShowMode(int16(mspinit), int16(mspmode))
+				}
+			}
+
+			if ttick-gtick > GPS_TIMEOUT {
+				println("*** GPS timeout ***")
+				gtick = ttick
+				oled.ShowTime("??:??:??")
+				oled.ShowGPS(0, 0)
+				oled.ClearRow(OLED_ROW_VPOS)
+			}
+
+			if mspinit == msp_INIT_WIP && ttick-mtick > MSP_TIMEOUT {
+				println("*** MSP INIT timeout ***")
+				mtick = ttick
+				mspinit = msp_INIT_INIT
+			}
+
+			if mspinit == msp_INIT_DONE {
+				if ttick-mtick > NAV_TIMEOUT {
+					println("*** MSP NAV TIMEOUT ***")
+					oled.INAVReset()
+					mspinit = msp_INIT_INIT
+					mspmode = 0
+				} else {
+					m.MSPCommand(MSP_NAV_STATUS, nil)
+				}
 			}
 
 		case fix := <-fchan:
 			if mspinit != msp_INIT_NONE {
+				gtick = ttick
 				ts := fix.Stamp.Format("15:04:05")
 				oled.ShowTime(ts)
 				oled.ShowGPS(uint16(fix.Sats), fix.Quality)
-				oled.ShowMode(int16(mspinit), int16(mspmode))
 				print(ts)
 				print(" [", mspinit, ":", mspmode, "]")
 				println(" Qual: ", fix.Quality, " sats: ", fix.Sats, " lat: ", fix.Lat, " lon: ", fix.Lon)
@@ -93,7 +124,6 @@ func main() {
 					if mspinit == msp_INIT_INIT {
 						println("Starting MSP")
 						mspinit = msp_INIT_WIP
-						itimer.Reset(1 * time.Minute)
 						m.MSPCommand(MSP_FC_VARIANT, nil)
 					} else if mspinit == msp_INIT_DONE {
 						if mspmode == MW_GPS_MODE_HOLD {
@@ -104,10 +134,14 @@ func main() {
 					}
 				} else {
 					mspinit = msp_INIT_INIT
+					mspmode = 0
+					oled.ClearRow(OLED_ROW_VPOS)
+					oled.ClearRow(OLED_ROW_VSAT)
 				}
 			}
 		case v := <-mchan:
 			if v.ok {
+				mtick = ttick
 				switch v.cmd {
 				case MSP_FC_VARIANT:
 					vers := string(v.data[0:4])
@@ -135,11 +169,8 @@ func main() {
 				case MSP2_INAV_MIXER:
 					ptype := binary.LittleEndian.Uint16(v.data[3:5])
 					println("Platform type: ", ptype)
-					itimer.Stop()
 					if ptype != DONT_FOLLOW_TYPE {
 						mspinit = msp_INIT_DONE
-						m.MSPCommand(MSP_NAV_STATUS, nil)
-						mtimer.Reset(100 * time.Millisecond)
 						mloop = 0
 					} else {
 						mspinit = msp_INIT_FAIL
@@ -176,7 +207,7 @@ func main() {
 					}
 
 				case MSP_SET_WP:
-					println("set wp")
+					println("set wp ACK")
 				default:
 					println("** msp cmd: ", v.cmd, " ***")
 				}

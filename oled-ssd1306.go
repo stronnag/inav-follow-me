@@ -11,6 +11,16 @@ const FONT_W int16 = 7
 const OLED_WIDTH = 128
 const OLED_HEIGHT = 64
 
+const (
+	OLED_ROW_TIME = iota
+	OLED_ROW_GPS
+	OLED_ROW_MODE
+	OLED_ROW_INAV
+	OLED_ROW_VSAT
+	OLED_ROW_VPOS
+	OLED_ROW_COUNT
+)
+
 type OledDisplay struct {
 	d   font.Display
 	dev ssd1306.Device
@@ -81,42 +91,43 @@ func (o *OledDisplay) incX(n int) {
 func (o *OledDisplay) setPos(x int, y int) {
 	o.d.XPos = int16(x) * FONT_W
 	o.d.YPos = int16(y) * FONT_H
-	if y > 1 {
+	if y > OLED_ROW_GPS {
 		o.d.YPos += 3
 	}
 }
 
 func (o *OledDisplay) InitScreen() {
+	o.setPos(0, OLED_ROW_TIME)
 	o.ShowTime("--:--:--")
 
-	o.setPos(0, 1)
+	o.setPos(0, OLED_ROW_GPS)
 	o.d.PrintText("GPS :")
-
-	o.setPos(0, 2)
-	o.d.PrintText("INAV:")
 
 	o.drawSep()
 
-	o.setPos(0, 3)
+	o.setPos(0, OLED_ROW_MODE)
 	o.d.PrintText("Mode:")
 
-	o.setPos(0, 4)
+	o.setPos(0, OLED_ROW_INAV)
+	o.d.PrintText("INAV: -.-.-")
+
+	o.setPos(0, OLED_ROW_VSAT)
 	o.d.PrintText("VSat:")
 
-	o.setPos(0, 5)
+	o.setPos(0, OLED_ROW_VPOS)
 	o.d.PrintText("VPos:")
 }
 
 func (o *OledDisplay) ShowTime(t string) {
 	xpos := (18 - len(t)) / 2
-	o.setPos(xpos, 0)
+	o.setPos(xpos, OLED_ROW_TIME)
 	o.d.PrintText(t)
 	o.incX(len(t))
 	o.cEOL()
 }
 
 func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
-	o.setPos(6, 1)
+	o.setPos(6, OLED_ROW_GPS)
 	t := Uitoa(uint(nsat))
 	o.d.PrintText(t)
 	o.incX(len(t))
@@ -142,36 +153,34 @@ func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
 }
 
 func (o *OledDisplay) ShowINAVVers(t string) {
-	o.setPos(6, 2)
+	o.setPos(6, OLED_ROW_INAV)
 	o.d.PrintText(t)
 }
 
 func (o *OledDisplay) ShowMode(amode int16, imode int16) {
-	o.setPos(6, 3)
-
+	o.setPos(6, OLED_ROW_MODE)
 	var t string
 
 	switch amode {
 	case 0:
-		t = "None"
+		t = "Starting"
 	case 1:
-		t = "Init"
+		t = "Initialised"
 	case 2:
-		t = "Try"
+		t = "Connecting"
 	case 3:
-		t = "Conn"
+		t = "Connected"
 	default:
-		t = "Fail"
+		t = "Failed"
 	}
 	o.d.PrintText(t)
 	o.incX(len(t))
+	o.cEOL()
 
-	o.d.PrintText(" / ")
-	o.incX(3)
-
+	o.setPos(12, OLED_ROW_INAV)
 	switch imode {
 	case 0:
-		t = "None"
+		t = "Idle"
 	case 1:
 		t = "PH"
 	case 2:
@@ -183,12 +192,11 @@ func (o *OledDisplay) ShowMode(amode int16, imode int16) {
 	}
 	o.d.PrintText(t)
 	o.incX(len(t))
-
 	o.cEOL()
 }
 
 func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
-	o.setPos(6, 4)
+	o.setPos(6, OLED_ROW_VSAT)
 
 	t := Uitoa(uint(nsat))
 	t = fill(t, 2, false)
@@ -213,7 +221,7 @@ func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
 }
 
 func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
-	o.setPos(6, 5)
+	o.setPos(6, OLED_ROW_VPOS)
 	if dist >= 100000 {
 		o.d.PrintText("*****")
 		o.incX(5)
@@ -246,11 +254,15 @@ func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
 	o.d.PrintChar('*')
 }
 
+func (o *OledDisplay) ClearRow(row int) {
+	o.setPos(6, row)
+	o.cEOL()
+}
+
 func (o *OledDisplay) INAVReset() {
 	o.ShowINAVVers("?.?.?")
-	for j := 3; j < 6; j++ {
-		o.setPos(6, j)
-		o.cEOL()
+	for j := OLED_ROW_MODE; j < OLED_ROW_COUNT; j++ {
+		o.ClearRow(j)
 	}
 }
 

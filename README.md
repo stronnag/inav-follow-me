@@ -93,22 +93,41 @@ The fields are as follows:
 
 * The 1st line shows the attached GPS time
 * The 2nd line (**GPS**) shows the local GPS Status (satellites and fix type)
-* If connected to INAV, the 3rd line (**INAV**) shows the INAV Firmware version
-* The 4th line (**Mode**) shows the INAV connection status and navigation mode.
+* The 3rd line (**Mode**) shows the INAV connection status
+* If connected to INAV, the 4th line (**INAV**) shows the INAV Firmware version and and navigation mode.
 * The 5th line (**VSat**) shows the vehicle's (INAV) satellite count and HDOP.
 * The 6th Line (**VPos**) shows the distance and bearing from the vehicle to the user.
 
+#### Status
+
+* `Starting` : Application is starting
+* `Initialised` : Application ready for GPS input and MSP connection
+* `Connecting` : Connecting to FC / MSP (sufficient local satellites / fix)
+* `Connected` : Connected to the FC
+* `Failed` : FC did not return required information (in particular `FC_VARIANT` == `INAV`
+
+#### Navigation Modes
+
+* `Idle` : Not in a navigation mode
+* `PH` : Position Hold, application sends WP#255 location which will result in 'follow me' if the pilot also asserts `GCS NAV` mode
+* `RTH` : Return to home
+* `WP` : Waypoint mission
+
 ![IRL](assets/oled-fix.png)
 
-
+Note: The image is from an earlier build with some UI elements rearranged.
 
 ## Caveat
 
 This application has been bench tested; it has not been flight tested.
 
-Running against a GPS replay and trival MSP simulator, it appears to do the right thing.
+Running against a GPS replay and trivial MSP simulator, it appears to do the right thing.
 
 Note that at the moment, copious debug output is written to any connected USB (USB serial console).
+
+## Simulation Tools
+
+A GPS replayer (`gpsrd`) and a MSP simulator (`followsim`, sufficient for this application only) may be found in the `tools` directory. They require a native `Go` compiler.
 
 ## Licence
 
