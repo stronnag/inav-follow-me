@@ -16,7 +16,7 @@ Optionally, a SSD1306 OLED will be supported (once the author's device is delive
 
 ## Pico Firmware Configuration
 
-The configurable items are built into the application; it is necessary to rebuild the application to change them. Unless you have some (small) development skills, these are the only items you should change. See the source file `prefs.go`:
+The configurable items are built into the application; it is necessary to rebuild the application to change them. Unless you have some (small) development skills and which to change other things, these are the only items you should change. See the source file `prefs.go`:
 
 ``` go
 /* user preferences */
@@ -34,7 +34,7 @@ const (
 )
 /* End of user preferences */
 ```
-If the configuration is changed, it is necessary to rebuild the firmware.
+If the configuration is changed, it is necessary to rebuild / reflash the firmware.
 
 ## Pico Hardware Connections
 
@@ -49,7 +49,7 @@ These may be changed by updating the peripheral device configurations in `main.g
 * Power up the Pico.
 * If the Pico is powered / connected via USB, then status information is provided over USB and may be viewed in any serial terminal.
 * Status data will be displayed on the OLED.
-  * When no valid data is available : "Init"
+  * When no valid data is available : "Initialised"
   * Once GPS time is available "HH:MM:SS"
 	* GPS Quality (0/1/2), no fix, GPS fix, DGPS fix.
 	* Number of satellites
@@ -57,10 +57,9 @@ These may be changed by updating the peripheral device configurations in `main.g
   * If the vehicle is of type `DONT_FOLLOW_TYPE` (typically FW), then follow me is not available.
   * Otherwise, navigation interrogation is started. If navigation mode `HOLD` is reported, and the distance between the vehicle and GCS is greater than `MIN_FOLLOW_DIST`, then follow me data (the required observer / GCS location) is sent to the vehicle.
   * The "follow me" status will be displayed on the OLED.
-  * The vehicle will only react to this data if the user has also set `GCS NAV` mode. The user may switch between normal `POSHOLD` and "Follow me" by toggling a `GCS NAV` switch on the transmitter.
+  * The vehicle will only react to this data if the user has also asserts `GCS NAV` mode. The user may switch between normal `POSHOLD` and "Follow me" by toggling a `GCS NAV` switch on the transmitter.
 
 **Note** that as the vehicle has to be in `POSHOLD` for `GCS NAV` to work, if you experience any issues, disengaging the `GCS NAV` switch will revert to standard `POSHOLD`.
-
 
 ## Installation and Building
 
@@ -68,9 +67,9 @@ A `fl2` file may be provided (in the Release folder) with the default settings s
 
 ### Build requirements
 
-* `tinygo` compiler (most Linux distros / FreeBSD provide packages or [Github Project releases](https://github.com/tinygo-org/tinygo/releases)).
+* `tinygo` compiler (most Linux distros / FreeBSD provide packages or [Github Project releases](https://github.com/tinygo-org/tinygo/releases)) for others.
 * Optionally, `make` to automate
-* Internet access for some external packages for first build.
+* Internet access for required external packages (for first build).
 
 ### Make targets
 
@@ -94,7 +93,7 @@ The fields are as follows:
 * The 1st line shows the attached GPS time
 * The 2nd line (**GPS**) shows the local GPS Status (satellites and fix type)
 * The 3rd line (**Mode**) shows the INAV connection status
-* If connected to INAV, the 4th line (**INAV**) shows the INAV Firmware version and and navigation mode.
+* When connected to INAV, the 4th line (**INAV**) shows the INAV Firmware version and and navigation mode.
 * The 5th line (**VSat**) shows the vehicle's (INAV) satellite count and HDOP.
 * The 6th Line (**VPos**) shows the distance and bearing from the vehicle to the user.
 
@@ -104,7 +103,7 @@ The fields are as follows:
 * `Initialised` : Application ready for GPS input and MSP connection
 * `Connecting` : Connecting to FC / MSP (sufficient local satellites / fix)
 * `Connected` : Connected to the FC
-* `Failed` : FC did not return required information (in particular `FC_VARIANT` == `INAV`
+* `Failed` : FC did not return required information (in particular `FC_VARIANT` == `INAV` or excluded by `DONT_FOLLOW_TYPE`).
 
 #### Navigation Modes
 
@@ -119,7 +118,7 @@ Note: The image is from an earlier build with some UI elements rearranged.
 
 ## Caveat
 
-This application has been bench tested; it has not been flight tested.
+This application has been bench tested; it has not tested in flight (by the author).
 
 Running against a GPS replay and trivial MSP simulator, it appears to do the right thing.
 
@@ -127,7 +126,7 @@ Note that at the moment, copious debug output is written to any connected USB (U
 
 ## Simulation Tools
 
-A GPS replayer (`gpsrd`) and a MSP simulator (`followsim`, sufficient for this application only) may be found in the `tools` directory. They require a native `Go` compiler.
+A GPS replayer (`gpsrd`) and a MSP simulator (`followsim`, sufficient for this application only) may be found in the `tools` directory. These require a native `Go` compiler.
 
 ## Licence
 
