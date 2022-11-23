@@ -131,6 +131,10 @@ Note that at the moment, copious debug output is written to any connected USB (U
 
 A GPS replayer (`gpsrd`) and a MSP simulator (`followsim`, sufficient for this application only) may be found in the `tools` directory. These require a native `Go` compiler.
 
+## Additional Infomation
+
+Please see the wiki, in particular [pinout diagram and high level design](https://github.com/stronnag/inav-follow-me/wiki/Pinout-and-Design-reference) reference.
+
 ## Licence
 
 (c) Jonathan Hudson 2022. 0-BSD.
