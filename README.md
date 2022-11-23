@@ -43,7 +43,7 @@ If the configuration is changed, it is necessary to rebuild / reflash the firmwa
 
 * The GPS is connected to UART0 (pins 1 & 2)
 * The MSP serial link is connected to UART1 (pins 11 & 12)
-* Optionally, the OLED is connected to I2C1 (SDA pin 31, SCL pin 32)
+* Optionally, the OLED is connected to I2C1 (SDA pin 31, SCL pin 32). These pins are used for ergonomics such that all the external connector are not on one side of the device.
 
 These may be changed by updating the peripheral device configurations in `main.go`.
 
