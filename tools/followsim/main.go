@@ -75,16 +75,17 @@ func main() {
 				case 'p', 'P':
 					poshold = !poshold
 					fmt.Printf("Poshold: %v\n", poshold)
-				case 3, 'Q', 'q':
+				case 'Q', 'q':
 					done = true
-				case '\r', '\n':
-					fmt.Println()
 				default:
 				}
-			} else if ev.Key == keyboard.KeyCtrlC {
-				done = true
+			} else {
+				if ev.Key == keyboard.KeyCtrlC {
+					done = true
+				} else if ev.Key == keyboard.KeyEnter {
+					fmt.Println()
+				}
 			}
-
 		case v := <-c0:
 			st := time.Now()
 			fmt.Printf("%s ", st.Format("15:04:05"))
