@@ -126,7 +126,7 @@ func main() {
 						mspinit = msp_INIT_WIP
 						m.MSPCommand(MSP_FC_VARIANT, nil)
 					} else if mspinit == msp_INIT_DONE {
-						if mspmode == MW_GPS_MODE_HOLD {
+						if mspmode == MW_GPS_MODE_HOLD && !(fix.Lat == 0.0 && fix.Lon == 0.0) {
 							c, d := m.Followme(fix.Lat, fix.Lon, msplat, msplon)
 							println("Vehicle:", c, d)
 							oled.ShowINAVPos(uint(d), uint16(c))
