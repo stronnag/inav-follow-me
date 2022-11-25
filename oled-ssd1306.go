@@ -6,10 +6,14 @@ import (
 	"tinygo.org/x/drivers/ssd1306"
 )
 
-const FONT_H int16 = 10
-const FONT_W int16 = 7
+const VERSION = "v1.0.0"
+
+var FONT_H int16 = 10
+var FONT_W int16 = 7
+
 const OLED_WIDTH = 128
 const OLED_HEIGHT = 64
+const OLED_EXTRA_SPACE = 3
 
 const (
 	OLED_ROW_TIME = iota
@@ -88,17 +92,15 @@ func (o *OledDisplay) incX(n int) {
 	o.d.XPos += int16(n) * FONT_W
 }
 
-func (o *OledDisplay) setPos(x int, y int) {
+func (o *OledDisplay) setPos(x, y, offset int) {
 	o.d.XPos = int16(x) * FONT_W
 	o.d.YPos = int16(y) * FONT_H
-	if y > OLED_ROW_GPS {
-		o.d.YPos += 3
-	}
+	o.d.YPos += int16(offset)
 }
 
 func (o *OledDisplay) ClearTime(fail bool) {
 	var str string
-	o.setPos(0, OLED_ROW_TIME)
+	o.setPos(0, OLED_ROW_TIME, 0)
 	o.cEOL()
 	if fail {
 		str = "??:??:??"
@@ -108,37 +110,55 @@ func (o *OledDisplay) ClearTime(fail bool) {
 	o.ShowTime(str)
 }
 
+func (o *OledDisplay) SplashScreen() {
+	o.d.Configure(font.Config{FontType: font.FONT_11x18})
+	FONT_W = 11
+	FONT_H = 18
+	o.CentreString("INAV", 0, 4)
+	o.CentreString("Follow Me!", 1, 4)
+	o.CentreString(VERSION, 2, 4)
+}
+
 func (o *OledDisplay) InitScreen() {
+	o.dev.ClearDisplay()
+	o.d.Configure(font.Config{FontType: font.FONT_7x10})
+	FONT_W = 7
+	FONT_H = 10
+
 	o.ClearTime(false)
 
-	o.setPos(0, OLED_ROW_GPS)
+	o.setPos(0, OLED_ROW_GPS, 0)
 	o.d.PrintText("GPS :")
 
 	o.drawSep()
 
-	o.setPos(0, OLED_ROW_MODE)
+	o.setPos(0, OLED_ROW_MODE, OLED_EXTRA_SPACE)
 	o.d.PrintText("Mode:")
 
-	o.setPos(0, OLED_ROW_INAV)
+	o.setPos(0, OLED_ROW_INAV, OLED_EXTRA_SPACE)
 	o.d.PrintText("INAV: -.-.-")
 
-	o.setPos(0, OLED_ROW_VSAT)
+	o.setPos(0, OLED_ROW_VSAT, OLED_EXTRA_SPACE)
 	o.d.PrintText("VSat:")
 
-	o.setPos(0, OLED_ROW_VPOS)
+	o.setPos(0, OLED_ROW_VPOS, OLED_EXTRA_SPACE)
 	o.d.PrintText("VPos:")
 }
 
-func (o *OledDisplay) ShowTime(t string) {
-	xpos := (18 - len(t)) / 2
-	o.setPos(xpos, OLED_ROW_TIME)
+func (o *OledDisplay) CentreString(t string, row int, offset int) {
+	o.d.XPos = (OLED_WIDTH - FONT_W*int16(len(t))) / 2
+	o.d.YPos = int16(row)*FONT_H + int16(offset)
 	o.d.PrintText(t)
 	o.incX(len(t))
 	o.cEOL()
 }
 
+func (o *OledDisplay) ShowTime(t string) {
+	o.CentreString(t, OLED_ROW_TIME, 0)
+}
+
 func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
-	o.setPos(6, OLED_ROW_GPS)
+	o.setPos(6, OLED_ROW_GPS, 0)
 	t := Uitoa(uint(nsat))
 	o.d.PrintText(t)
 	o.incX(len(t))
@@ -164,12 +184,12 @@ func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
 }
 
 func (o *OledDisplay) ShowINAVVers(t string) {
-	o.setPos(6, OLED_ROW_INAV)
+	o.setPos(6, OLED_ROW_INAV, OLED_EXTRA_SPACE)
 	o.d.PrintText(t)
 }
 
 func (o *OledDisplay) ShowMode(amode int16, imode int16) {
-	o.setPos(6, OLED_ROW_MODE)
+	o.setPos(6, OLED_ROW_MODE, OLED_EXTRA_SPACE)
 	var t string
 
 	switch amode {
@@ -188,7 +208,7 @@ func (o *OledDisplay) ShowMode(amode int16, imode int16) {
 	o.incX(len(t))
 	o.cEOL()
 
-	o.setPos(12, OLED_ROW_INAV)
+	o.setPos(12, OLED_ROW_INAV, OLED_EXTRA_SPACE)
 	switch imode {
 	case 0:
 		t = "Idle"
@@ -207,7 +227,7 @@ func (o *OledDisplay) ShowMode(amode int16, imode int16) {
 }
 
 func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
-	o.setPos(6, OLED_ROW_VSAT)
+	o.setPos(6, OLED_ROW_VSAT, OLED_EXTRA_SPACE)
 
 	t := Uitoa(uint(nsat))
 	t = fill(t, 2, false)
@@ -232,7 +252,7 @@ func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
 }
 
 func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
-	o.setPos(6, OLED_ROW_VPOS)
+	o.setPos(6, OLED_ROW_VPOS, OLED_EXTRA_SPACE)
 	if dist >= 100000 {
 		o.d.PrintText("*****")
 		o.incX(5)
@@ -265,15 +285,15 @@ func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
 	o.d.PrintChar('*')
 }
 
-func (o *OledDisplay) ClearRow(row int) {
-	o.setPos(6, row)
+func (o *OledDisplay) ClearRow(row, offset int) {
+	o.setPos(6, row, offset)
 	o.cEOL()
 }
 
 func (o *OledDisplay) INAVReset() {
 	o.ShowINAVVers("?.?.?")
 	for j := OLED_ROW_MODE; j < OLED_ROW_COUNT; j++ {
-		o.ClearRow(j)
+		o.ClearRow(j, 3)
 	}
 }
 

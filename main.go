@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	font "github.com/Nondzu/ssd1306_font"
 	"machine"
 	"time"
 	"tinygo.org/x/drivers/ssd1306"
@@ -47,16 +46,13 @@ func main() {
 	dev.Configure(ssd1306.Config{Width: OLED_WIDTH, Height: OLED_HEIGHT,
 		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
 	dev.ClearBuffer()
-	dev.ClearDisplay()
 
 	oled := NewOLED(dev)
-	oled.d.Configure(font.Config{FontType: font.FONT_7x10}) //set font here
-	oled.InitScreen()
-
 	g := NewGPSUartReader(*uart0, fchan)
-	go g.UartReader()
-
 	m := NewMSPUartReader(*uart1, mchan)
+
+	oled.SplashScreen()
+	go g.UartReader()
 	go m.UartReader()
 
 	mspinit := msp_INIT_NONE
@@ -71,13 +67,13 @@ func main() {
 
 	for {
 		select {
-
 		case <-ticker.C:
 			ttick += 1
 
 			if mspinit == msp_INIT_NONE {
-				if ttick > 20 {
+				if ttick == 50 {
 					println("Initialised")
+					oled.InitScreen()
 					mspinit = msp_INIT_INIT
 				}
 			} else {
@@ -91,7 +87,7 @@ func main() {
 				gtick = ttick
 				oled.ClearTime(true)
 				oled.ShowGPS(0, 0)
-				oled.ClearRow(OLED_ROW_VPOS)
+				oled.ClearRow(OLED_ROW_VPOS, OLED_EXTRA_SPACE)
 			}
 
 			if mspinit == msp_INIT_WIP && ttick-mtick > MSP_TIMEOUT {
@@ -135,8 +131,8 @@ func main() {
 				} else {
 					mspinit = msp_INIT_INIT
 					mspmode = 0
-					oled.ClearRow(OLED_ROW_VPOS)
-					oled.ClearRow(OLED_ROW_VSAT)
+					oled.ClearRow(OLED_ROW_VPOS, OLED_EXTRA_SPACE)
+					oled.ClearRow(OLED_ROW_VSAT, OLED_EXTRA_SPACE)
 				}
 			}
 		case v := <-mchan:
@@ -180,7 +176,7 @@ func main() {
 						mspmode = v.data[0]
 						println("nav status: ", mspmode)
 						if v.data[0] == 0 {
-							oled.ClearRow(OLED_ROW_VPOS)
+							oled.ClearRow(OLED_ROW_VPOS, OLED_EXTRA_SPACE)
 						}
 						oled.ShowMode(int16(mspinit), int16(mspmode))
 					}
