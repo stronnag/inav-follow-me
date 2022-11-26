@@ -1,10 +1,11 @@
 TARGET=pico
 APP=inav-follow
-SRC = main.go gpsreader.go msp.go geocalc.go prefs.go oled-ssd1306.go vbat.go
+SRC = main.go prefs.go
+PKGS = pkg/gps/gpsreader.go pkg/msp/msp.go pkg/geo/geocalc.go pkg/oled/oled-ssd1306.go pkg/vbat/vbat.go
 
 all : $(APP).elf
 
-$(APP).elf: $(SRC) go.sum
+$(APP).elf: $(SRC) $(PKG) go.sum
 	tinygo build -target $(TARGET) -size short -o $(APP).elf
 
 go.sum: go.mod $(wildcard *.go)
@@ -17,4 +18,5 @@ uf2: $(APP).elf
 	elf2uf2-rs $(APP).elf $(APP).uf2
 
 clean:
+	go clean
 	rm -f $(APP).elf $(APP).uf2 go.sum
