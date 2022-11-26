@@ -1,4 +1,4 @@
-package main
+package msp
 
 import (
 	"encoding/binary"
@@ -7,10 +7,10 @@ import (
 )
 
 type MSPMsg struct {
-	len  uint16
-	cmd  uint16
-	ok   bool
-	data []byte
+	Len  uint16
+	Cmd  uint16
+	Ok   bool
+	Data []byte
 }
 
 type MSPReader struct {
@@ -61,8 +61,8 @@ var (
 	mspdelay time.Duration
 )
 
-func NewMSPUartReader(uart machine.UART, mchan chan MSPMsg) *MSPReader {
-	mspdelay = (10 * 1000000 / (2 * MSPBAUD)) * time.Microsecond
+func NewMSPUartReader(uart machine.UART, mchan chan MSPMsg, baud int) *MSPReader {
+	mspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
 	return &MSPReader{uart: uart, mchan: mchan}
 }
 
@@ -80,9 +80,9 @@ func (m *MSPReader) UartReader() {
 				case state_INIT:
 					if c == '$' {
 						mstate = state_MX
-						msg.ok = false
-						msg.len = 0
-						msg.cmd = 0
+						msg.Ok = false
+						msg.Len = 0
+						msg.Cmd = 0
 					}
 
 				case state_MX:
@@ -97,7 +97,7 @@ func (m *MSPReader) UartReader() {
 						mstate = state_FLAGS
 					} else if c == '>' {
 						mstate = state_FLAGS
-						msg.ok = true
+						msg.Ok = true
 					} else {
 						mstate = state_INIT
 					}
@@ -108,42 +108,42 @@ func (m *MSPReader) UartReader() {
 
 				case state_ID1:
 					crc = crc8_dvb_s2(crc, c)
-					msg.cmd = uint16(c)
+					msg.Cmd = uint16(c)
 					mstate = state_ID2
 
 				case state_ID2:
 					crc = crc8_dvb_s2(crc, c)
-					msg.cmd |= uint16(uint16(c) << 8)
+					msg.Cmd |= uint16(uint16(c) << 8)
 					mstate = state_LEN1
 
 				case state_LEN1:
 					crc = crc8_dvb_s2(crc, c)
-					msg.len = uint16(c)
+					msg.Len = uint16(c)
 					mstate = state_LEN2
 
 				case state_LEN2:
 					count = 0
 					crc = crc8_dvb_s2(crc, c)
-					msg.len |= uint16(uint16(c) << 8)
-					if msg.len > 0 {
+					msg.Len |= uint16(uint16(c) << 8)
+					if msg.Len > 0 {
 						mstate = state_DATA
-						msg.data = make([]byte, msg.len)
+						msg.Data = make([]byte, msg.Len)
 					} else {
 						mstate = state_CHECKSUM
 					}
 
 				case state_DATA:
 					crc = crc8_dvb_s2(crc, c)
-					msg.data[count] = c
+					msg.Data[count] = c
 					count++
-					if count == msg.len {
+					if count == msg.Len {
 						mstate = state_CHECKSUM
 					}
 
 				case state_CHECKSUM:
 					ccrc := c
 					if crc != ccrc {
-						msg.ok = false
+						msg.Ok = false
 					}
 					m.mchan <- msg
 					mstate = state_INIT
@@ -184,17 +184,7 @@ func (m *MSPReader) MSPCommand(cmd uint16, payload []byte) {
 	m.uart.Write(rb)
 }
 
-func (m *MSPReader) Followme(lat, lon, mlat, mlon float32) (float32, float32) {
-	c, d := Csedist(mlat, mlon, lat, lon)
-	println("Follow (v->u)", mlat, mlon, lat, lon, " dist:", int(d), "m", "Brg: ", int(c))
-	if d > MIN_FOLLOW_DIST {
-		fbuf := serialise_wp(lat, lon, uint16(c))
-		m.MSPCommand(MSP_SET_WP, fbuf)
-	}
-	return c, d
-}
-
-func serialise_wp(lat, lon float32, brg uint16) []byte {
+func (m *MSPReader) Update_WP255(lat, lon float32, brg uint16) {
 	buf := make([]byte, 21)
 	buf[0] = byte(255)
 	buf[1] = wp_WAYPOINT
@@ -207,5 +197,5 @@ func serialise_wp(lat, lon float32, brg uint16) []byte {
 	binary.LittleEndian.PutUint16(buf[16:18], uint16(0))
 	binary.LittleEndian.PutUint16(buf[18:20], uint16(0))
 	buf[20] = byte(0xa5) // not checked, so 0 would do
-	return buf
+	m.MSPCommand(MSP_SET_WP, buf)
 }

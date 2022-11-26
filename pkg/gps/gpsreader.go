@@ -1,4 +1,4 @@
-package main
+package gps
 
 import (
 	"machine"
@@ -30,8 +30,8 @@ var (
 	gspdelay time.Duration
 )
 
-func NewGPSUartReader(uart machine.UART, fchan chan Fix) *GPSReader {
-	gspdelay = (10 * 1000000 / (2 * GPSBAUD)) * time.Microsecond
+func NewGPSUartReader(uart machine.UART, fchan chan Fix, baud int) *GPSReader {
+	gspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
 	line := make([]byte, 128)
 	return &GPSReader{uart: uart, fchan: fchan, Fix: Fix{}, line: line}
 }

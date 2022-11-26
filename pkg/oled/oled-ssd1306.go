@@ -1,9 +1,10 @@
-package main
+package oled
 
 import (
 	font "github.com/Nondzu/ssd1306_font"
 	"image/color"
 	"tinygo.org/x/drivers/ssd1306"
+	"vbat"
 )
 
 var FONT_H int16 = 10
@@ -108,13 +109,13 @@ func (o *OledDisplay) ClearTime(fail bool) {
 	o.ShowTime(str)
 }
 
-func (o *OledDisplay) SplashScreen() {
+func (o *OledDisplay) SplashScreen(version string) {
 	o.d.Configure(font.Config{FontType: font.FONT_11x18})
 	FONT_W = 11
 	FONT_H = 18
 	o.CentreString("INAV", 0, 4)
 	o.CentreString("Follow Me!", 1, 4)
-	o.CentreString(VERSION, 2, 4)
+	o.CentreString(version, 2, 4)
 }
 
 func (o *OledDisplay) InitScreen() {
@@ -152,7 +153,7 @@ func (o *OledDisplay) CentreString(t string, row int, offset int) {
 }
 
 func (o *OledDisplay) ShowTime(t string) {
-	if VBAT_MODE == VBAT_NONE {
+	if vbat.Vmode == vbat.VBAT_NONE {
 		o.CentreString(t, OLED_ROW_TIME, 0)
 	} else {
 		o.setPos(0, OLED_ROW_TIME, 0)
@@ -308,7 +309,7 @@ func (o *OledDisplay) drawSep() {
 }
 
 func (o *OledDisplay) ShowVBat(vin uint16) {
-	if VBAT_MODE != VBAT_NONE {
+	if vbat.Vmode != vbat.VBAT_NONE {
 		vs := make([]byte, 4)
 		vs[0] = '0' + byte(vin/10)
 		vs[1] = '.'
