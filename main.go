@@ -8,10 +8,15 @@ import (
 )
 
 const (
+	VERSION = "v1.0.1"
+)
+
+const (
 	MW_GPS_MODE_HOLD = 1
 	GPS_TIMEOUT      = 600 // (in 0.1 seconds)
 	MSP_TIMEOUT      = 600 // (in 0.1 seconds)
 	NAV_TIMEOUT      = 100 // (in 0.1 seconds)
+	SPLASH_TIMEOUT   = 50  // (5 seconds)
 )
 
 const (
@@ -47,6 +52,8 @@ func main() {
 		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
 	dev.ClearBuffer()
 
+	VBatInit()
+
 	oled := NewOLED(dev)
 	g := NewGPSUartReader(*uart0, fchan)
 	m := NewMSPUartReader(*uart1, mchan)
@@ -71,13 +78,15 @@ func main() {
 			ttick += 1
 
 			if mspinit == msp_INIT_NONE {
-				if ttick == 50 {
+				if ttick == SPLASH_TIMEOUT {
 					println("Initialised")
 					oled.InitScreen()
 					mspinit = msp_INIT_INIT
 				}
 			} else {
 				if ttick%10 == 0 {
+					vin, _ := VBatRead()
+					oled.ShowVBat(vin)
 					oled.ShowMode(int16(mspinit), int16(mspmode))
 				}
 			}

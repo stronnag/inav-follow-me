@@ -154,7 +154,12 @@ func (o *OledDisplay) CentreString(t string, row int, offset int) {
 }
 
 func (o *OledDisplay) ShowTime(t string) {
-	o.CentreString(t, OLED_ROW_TIME, 0)
+	if VBAT_MODE == VBAT_NONE {
+		o.CentreString(t, OLED_ROW_TIME, 0)
+	} else {
+		o.setPos(0, OLED_ROW_TIME, 0)
+		o.d.PrintText(t)
+	}
 }
 
 func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
@@ -301,5 +306,18 @@ func (o *OledDisplay) drawSep() {
 	y := 1 + 2*FONT_H
 	for x := int16(0); x < OLED_WIDTH; x++ {
 		o.dev.SetPixel(x, y, color.RGBA{R: 1})
+	}
+}
+
+func (o *OledDisplay) ShowVBat(vin uint16) {
+	if VBAT_MODE != VBAT_NONE {
+		vs := make([]byte, 4)
+		vs[0] = '0' + byte(vin/10)
+		vs[1] = '.'
+		vs[2] = '0' + byte(vin%10)
+		vs[3] = 'V'
+		o.setPos(14, OLED_ROW_TIME, 0)
+		t := string(vs)
+		o.d.PrintText(t)
 	}
 }

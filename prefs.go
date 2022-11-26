@@ -15,6 +15,10 @@ const (
 	// GPS Time format, either integer seconds or 1 decimal
 	GPS_TIME_FORMAT = "15:04:05"
 	//GPS_TIME_FORMAT = "15:04:05.0"
+
+	//  VBAT_NONE, VBAT_PICO, VBAT_PICO_W
+	VBAT_MODE   = VBAT_PICO_W
+	VBAT_OFFSET = 0.8
 )
 
 /* End of user preferences */
