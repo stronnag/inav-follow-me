@@ -5,7 +5,7 @@ PKGS = pkg/gps/gpsreader.go pkg/msp/msp.go pkg/geo/geocalc.go pkg/oled/oled-ssd1
 
 all : $(APP).elf
 
-$(APP).elf: $(SRC) $(PKG) go.sum
+$(APP).elf: $(SRC) $(PKGS) go.sum
 	tinygo build -target $(TARGET) -size short -o $(APP).elf
 
 go.sum: go.mod $(wildcard *.go)
