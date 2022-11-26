@@ -6,8 +6,6 @@ import (
 	"tinygo.org/x/drivers/ssd1306"
 )
 
-const VERSION = "v1.0.0"
-
 var FONT_H int16 = 10
 var FONT_W int16 = 7
 

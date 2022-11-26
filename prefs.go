@@ -17,8 +17,8 @@ const (
 	//GPS_TIME_FORMAT = "15:04:05.0"
 
 	//  VBAT_NONE, VBAT_PICO, VBAT_PICO_W
-	VBAT_MODE   = VBAT_PICO_W
-	VBAT_OFFSET = 0.8
+	VBAT_MODE   = VBAT_NONE
+	VBAT_OFFSET = 0.0
 )
 
 /* End of user preferences */
