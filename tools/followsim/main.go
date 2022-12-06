@@ -88,7 +88,7 @@ func main() {
 			}
 		case v := <-c0:
 			st := time.Now()
-			fmt.Printf("%s ", st.Format("15:04:05"))
+			fmt.Printf("%s ", st.Format("15:04:05.0"))
 			switch v.cmd {
 			case MSP_FC_VARIANT:
 				fmt.Println("send varient")

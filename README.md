@@ -35,9 +35,13 @@ const (
 	GPS_TIME_FORMAT = "15:04:05"
 	//GPS_TIME_FORMAT = "15:04:05.0"
 
-	//  VBAT_NONE, VBAT_PICO, VBAT_PICO_W
-	VBAT_MODE   = VBAT_NONE
-	VBAT_OFFSET = 0.0
+	//  USE_VBAT boolean
+    USE_VBAT = true
+	// For Pico-W at least, you need this, otherwise set to 0.0
+    VBAT_OFFSET = 0.8
+
+	// if true, the HOME location will also be set to the follow me location
+	RESET_HOME = false
 )
 /* End of user preferences */
 ```
@@ -45,12 +49,12 @@ If the configuration is changed, it is necessary to rebuild / reflash the firmwa
 
 ### Voltage Reporting
 
-The method for reporting voltage differs between the Pico and Pico-W. Rather than auto-detect this, the choice must be made at build time. At least on the developer's Pico-W, an offset (`0.8`) is also required to display the external (`VSYS` voltage).
+The method for reporting voltage differs between the Pico and Pico-W. This is now auto-detected if `USE_VBAT = true` . At least on the developer's Pico-W, an offset (`0.8`V) is also required to display the external (`VSYS` voltage).
 
 In order to have voltage displayed, it is necessary to:
 
-* Set `VBAT_MODE` to the appropriate model type
-* If necessary, set `VBAT_OFFSET`
+* Set `USE_VBAT` to `true` (default)
+* Set `VBAT_OFFSET` (even to `0.0`)
 * Rebuild / reflash the firmware
 
 ## Pico Hardware Connections

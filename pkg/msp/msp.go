@@ -184,9 +184,9 @@ func (m *MSPReader) MSPCommand(cmd uint16, payload []byte) {
 	m.uart.Write(rb)
 }
 
-func (m *MSPReader) Update_WP255(lat, lon float32, brg uint16) {
+func (m *MSPReader) Update_WP(wpno byte, lat, lon float32, brg uint16) {
 	buf := make([]byte, 21)
-	buf[0] = byte(255)
+	buf[0] = wpno
 	buf[1] = wp_WAYPOINT
 	v := int32(lat * 1e7)
 	binary.LittleEndian.PutUint32(buf[2:6], uint32(v))

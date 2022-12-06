@@ -153,7 +153,7 @@ func (o *OledDisplay) CentreString(t string, row int, offset int) {
 }
 
 func (o *OledDisplay) ShowTime(t string) {
-	if vbat.Vmode == vbat.VBAT_NONE {
+	if !vbat.Vmode {
 		o.CentreString(t, OLED_ROW_TIME, 0)
 	} else {
 		o.setPos(0, OLED_ROW_TIME, 0)
@@ -309,7 +309,7 @@ func (o *OledDisplay) drawSep() {
 }
 
 func (o *OledDisplay) ShowVBat(vin uint16) {
-	if vbat.Vmode != vbat.VBAT_NONE {
+	if vbat.Vmode {
 		vs := make([]byte, 4)
 		vs[0] = '0' + byte(vin/10)
 		vs[1] = '.'

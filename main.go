@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	VERSION = "v1.0.1"
+	VERSION = "v1.2.0"
 )
 
 const (
@@ -33,6 +33,11 @@ const (
 	msp_INIT_WIP
 	msp_INIT_DONE
 	msp_INIT_FAIL
+)
+
+const (
+	HOME_WP   = 0
+	FOLLOW_WP = 255
 )
 
 func main() {
@@ -60,7 +65,7 @@ func main() {
 		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
 	dev.ClearBuffer()
 
-	vbat.VBatInit(VBAT_MODE, VBAT_OFFSET)
+	vbat.VBatInit(USE_VBAT, VBAT_OFFSET)
 
 	o := oled.NewOLED(dev)
 	g := gps.NewGPSUartReader(*uart0, fchan, GPSBAUD)
@@ -143,9 +148,12 @@ func main() {
 							c, d := geo.Csedist(msplat, msplon, fix.Lat, fix.Lon)
 							println("Follow (v->u)", msplat, msplon, fix.Lat, fix.Lon, " dist:", int(d), "m", "Brg: ", int(c))
 							if d > MIN_FOLLOW_DIST {
-								m.Update_WP255(fix.Lat, fix.Lon, uint16(c))
+								m.Update_WP(FOLLOW_WP, fix.Lat, fix.Lon, uint16(c))
 								println("Vehicle:", c, d)
 								o.ShowINAVPos(uint(d), uint16(c))
+								if RESET_HOME {
+									m.Update_WP(HOME_WP, fix.Lat, fix.Lon, uint16(c))
+								}
 							}
 						}
 					}

@@ -16,9 +16,13 @@ const (
 	GPS_TIME_FORMAT = "15:04:05"
 	//GPS_TIME_FORMAT = "15:04:05.0"
 
-	//  0 = VBAT_NONE, 1 = VBAT_PICO, 2 = VBAT_PICO_W
-	VBAT_MODE   = 0
-	VBAT_OFFSET = 0.0
+	//  USE_VBAT boolean
+	USE_VBAT = true
+	// For Pico-W at least, you need this, otherwise set to 0.0
+	VBAT_OFFSET = 0.8
+
+	// if true, the HOME location will also be set to the follow me location
+	RESET_HOME = false
 )
 
 /* End of user preferences */
