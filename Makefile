@@ -1,6 +1,6 @@
 TARGET=pico
 APP=inav-follow
-SRC = main.go prefs.go
+SRC = main.go prefs.go cli.go
 PKGS = pkg/gps/gpsreader.go pkg/msp/msp.go pkg/geo/geocalc.go pkg/oled/oled-ssd1306.go pkg/vbat/vbat.go
 
 all : $(APP).elf

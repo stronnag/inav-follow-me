@@ -3,8 +3,8 @@ package oled
 import (
 	font "github.com/Nondzu/ssd1306_font"
 	"image/color"
+	"strconv"
 	"tinygo.org/x/drivers/ssd1306"
-	"vbat"
 )
 
 var FONT_H int16 = 10
@@ -25,36 +25,13 @@ const (
 )
 
 type OledDisplay struct {
-	d   font.Display
-	dev ssd1306.Device
+	d     font.Display
+	dev   ssd1306.Device
+	vmode bool
 }
 
 func NewOLED(dev ssd1306.Device) *OledDisplay {
 	return &OledDisplay{d: font.NewDisplay(dev), dev: dev}
-}
-
-func Itoa(val int) string {
-	if val < 0 {
-		return "-" + Uitoa(uint(-val))
-	}
-	return Uitoa(uint(val))
-}
-
-func Uitoa(val uint) string {
-	if val == 0 {
-		return "0"
-	}
-	var buf [20]byte
-	i := len(buf) - 1
-	for val >= 10 {
-		q := val / 10
-		buf[i] = byte('0' + val - q*10)
-		i--
-		val = q
-	}
-	// val < 10
-	buf[i] = byte('0' + val)
-	return string(buf[i:])
 }
 
 func fill(t string, sz int, zf bool) string {
@@ -118,11 +95,12 @@ func (o *OledDisplay) SplashScreen(version string) {
 	o.CentreString(version, 2, 4)
 }
 
-func (o *OledDisplay) InitScreen() {
+func (o *OledDisplay) InitScreen(vb bool) {
 	o.dev.ClearDisplay()
 	o.d.Configure(font.Config{FontType: font.FONT_7x10})
 	FONT_W = 7
 	FONT_H = 10
+	o.vmode = vb
 
 	o.ClearTime(false)
 
@@ -153,7 +131,7 @@ func (o *OledDisplay) CentreString(t string, row int, offset int) {
 }
 
 func (o *OledDisplay) ShowTime(t string) {
-	if !vbat.Vmode {
+	if !o.vmode {
 		o.CentreString(t, OLED_ROW_TIME, 0)
 	} else {
 		o.setPos(0, OLED_ROW_TIME, 0)
@@ -163,7 +141,7 @@ func (o *OledDisplay) ShowTime(t string) {
 
 func (o *OledDisplay) ShowGPS(nsat uint16, fix uint8) {
 	o.setPos(6, OLED_ROW_GPS, 0)
-	t := Uitoa(uint(nsat))
+	t := strconv.FormatUint(uint64(nsat), 10)
 	o.d.PrintText(t)
 	o.incX(len(t))
 	if nsat < 2 {
@@ -233,7 +211,7 @@ func (o *OledDisplay) ShowMode(amode int16, imode int16) {
 func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
 	o.setPos(6, OLED_ROW_VSAT, OLED_EXTRA_SPACE)
 
-	t := Uitoa(uint(nsat))
+	t := strconv.FormatUint(uint64(nsat), 10)
 	t = fill(t, 2, false)
 	o.d.PrintText(t)
 	o.incX(len(t))
@@ -244,36 +222,28 @@ func (o *OledDisplay) ShowINAVSats(nsat uint16, hdop uint16) {
 	}
 	o.d.PrintText(t)
 	o.incX(len(t))
-	t = Uitoa(uint(hdop))
-	t = fill(t, 3, true)
-	o.d.PrintChar(t[0])
-	o.incX(1)
-	o.d.PrintChar('.')
-	o.incX(1)
-	o.d.PrintText(t[1:])
-	o.incX(2)
+	kv := float64(hdop) / 100
+	t = strconv.FormatFloat(kv, 'f', 1, 32)
+	o.d.PrintText(t)
+	o.incX(3)
 	o.cEOL()
 }
 
 func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
 	o.setPos(6, OLED_ROW_VPOS, OLED_EXTRA_SPACE)
 	if dist >= 100000 {
-		o.d.PrintText("*****")
+		o.d.PrintText(">100k")
 		o.incX(5)
 	} else if dist >= 10000 {
-		k := dist / 100
-		t := Uitoa(uint(k))
-		t = fill(t, 3, false)
-		o.d.PrintText(t[:2])
-		o.incX(2)
-		o.d.PrintChar('.')
-		o.incX(1)
-		o.d.PrintText(t[2:])
-		o.incX(1)
+		kv := float64(dist) / 1000.0
+		t := strconv.FormatFloat(kv, 'f', 1, 32)
+		t = fill(t, 4, false)
+		o.d.PrintText(t)
+		o.incX(4)
 		o.d.PrintChar('k')
 		o.incX(1)
 	} else {
-		t := Uitoa(uint(dist))
+		t := strconv.FormatUint(uint64(dist), 10)
 		t = fill(t, 4, false)
 		o.d.PrintText(t)
 		o.incX(4)
@@ -282,7 +252,7 @@ func (o *OledDisplay) ShowINAVPos(dist uint, brg uint16) {
 	}
 	o.d.PrintChar(' ')
 	o.incX(1)
-	t := Uitoa(uint(brg))
+	t := strconv.FormatUint(uint64(brg), 10)
 	t = fill(t, 3, true)
 	o.d.PrintText(t)
 	o.incX(3)
@@ -309,14 +279,12 @@ func (o *OledDisplay) drawSep() {
 }
 
 func (o *OledDisplay) ShowVBat(vin uint16) {
-	if vbat.Vmode {
-		vs := make([]byte, 4)
-		vs[0] = '0' + byte(vin/10)
-		vs[1] = '.'
-		vs[2] = '0' + byte(vin%10)
-		vs[3] = 'V'
-		o.setPos(14, OLED_ROW_TIME, 0)
-		t := string(vs)
-		o.d.PrintText(t)
-	}
+	vs := make([]byte, 4)
+	vs[0] = '0' + byte(vin/10)
+	vs[1] = '.'
+	vs[2] = '0' + byte(vin%10)
+	vs[3] = 'V'
+	o.setPos(14, OLED_ROW_TIME, 0)
+	t := string(vs)
+	o.d.PrintText(t)
 }

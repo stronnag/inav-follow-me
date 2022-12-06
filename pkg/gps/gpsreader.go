@@ -30,10 +30,14 @@ var (
 	gspdelay time.Duration
 )
 
-func NewGPSUartReader(uart machine.UART, fchan chan Fix, baud int) *GPSReader {
-	gspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
+func NewGPSUartReader(uart machine.UART, fchan chan Fix) *GPSReader {
 	line := make([]byte, 128)
 	return &GPSReader{uart: uart, fchan: fchan, Fix: Fix{}, line: line}
+}
+
+func (g *GPSReader) SetBaud(baud uint32) {
+	g.uart.SetBaudRate(baud)
+	gspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
 }
 
 func parseLatLon(ll string, nsew string, width int) float32 {
@@ -100,7 +104,6 @@ func valid_nmea(str string) bool {
 }
 
 func (r *GPSReader) parse_nmea(nmea string) bool {
-	//	println(nmea)
 	if valid_nmea(nmea) {
 		typ := nmea[3:6]
 		last := r.Fix.Stamp

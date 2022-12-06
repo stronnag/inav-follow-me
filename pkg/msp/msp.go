@@ -61,9 +61,13 @@ var (
 	mspdelay time.Duration
 )
 
-func NewMSPUartReader(uart machine.UART, mchan chan MSPMsg, baud int) *MSPReader {
-	mspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
+func NewMSPUartReader(uart machine.UART, mchan chan MSPMsg) *MSPReader {
 	return &MSPReader{uart: uart, mchan: mchan}
+}
+
+func (m *MSPReader) SetBaud(baud uint32) {
+	m.uart.SetBaudRate(baud)
+	mspdelay = time.Duration((10 * 1000000 / (2 * baud))) * time.Microsecond
 }
 
 func (m *MSPReader) UartReader() {

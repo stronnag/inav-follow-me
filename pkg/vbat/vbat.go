@@ -8,9 +8,8 @@ var (
 	vin     machine.ADC
 )
 
-func VBatInit(v_mode bool, v_offset float32) {
+func VBatInit(v_mode bool) {
 	Vmode = v_mode
-	voffset = v_offset
 	if Vmode {
 		machine.InitADC()
 		vin = machine.ADC{machine.ADC3}
@@ -21,6 +20,10 @@ func VBatInit(v_mode bool, v_offset float32) {
 			gp25.High()
 		}
 	}
+}
+
+func Offset(v_offset float32) {
+	voffset = v_offset
 }
 
 func VBatRead() (uint16, uint16) {

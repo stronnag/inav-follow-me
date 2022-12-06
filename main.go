@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"machine"
+	"strconv"
 	"time"
 	"tinygo.org/x/drivers/ssd1306"
 )
@@ -40,13 +41,23 @@ const (
 	FOLLOW_WP = 255
 )
 
+var (
+	GpsBaud    uint32  = GPSBAUD
+	MspBaud    uint32  = MSPBAUD
+	MinSat     int32   = GPSMINSAT
+	VBatOffset float32 = VBAT_OFFSET
+	ResetHome  bool    = RESET_HOME
+	Debug      bool
+)
+
 func main() {
+	Debug = true
+
 	uart0 := machine.UART0
 	uart0.Configure(machine.UARTConfig{
 		TX: machine.UART0_TX_PIN,
 		RX: machine.UART0_RX_PIN,
 	})
-	uart0.SetBaudRate(GPSBAUD)
 	fchan := make(chan gps.Fix)
 
 	uart1 := machine.UART1
@@ -54,7 +65,7 @@ func main() {
 		TX: machine.UART1_TX_PIN,
 		RX: machine.UART1_RX_PIN,
 	})
-	uart1.SetBaudRate(MSPBAUD)
+	uart1.SetBaudRate(MspBaud)
 	mchan := make(chan msp.MSPMsg)
 
 	machine.I2C1.Configure(machine.I2CConfig{Frequency: 400000,
@@ -65,11 +76,18 @@ func main() {
 		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
 	dev.ClearBuffer()
 
-	vbat.VBatInit(USE_VBAT, VBAT_OFFSET)
+	vbat.VBatInit(USE_VBAT)
+	vbat.Offset(VBatOffset)
 
 	o := oled.NewOLED(dev)
-	g := gps.NewGPSUartReader(*uart0, fchan, GPSBAUD)
-	m := msp.NewMSPUartReader(*uart1, mchan, MSPBAUD)
+	g := gps.NewGPSUartReader(*uart0, fchan)
+	g.SetBaud(GpsBaud)
+
+	m := msp.NewMSPUartReader(*uart1, mchan)
+	m.SetBaud(MspBaud)
+
+	cchan := make(chan EditMsg, 1)
+	go Clireader(cchan)
 
 	o.SplashScreen(VERSION)
 	go g.UartReader()
@@ -92,20 +110,26 @@ func main() {
 
 			if mspinit == msp_INIT_NONE {
 				if ttick == SPLASH_TIMEOUT {
-					println("Initialised")
-					o.InitScreen()
+					if Debug {
+						println("Initialised")
+					}
+					o.InitScreen(USE_VBAT)
 					mspinit = msp_INIT_INIT
 				}
 			} else {
 				if ttick%10 == 0 {
-					vin, _ := vbat.VBatRead()
-					o.ShowVBat(vin)
+					if USE_VBAT {
+						vin, _ := vbat.VBatRead()
+						o.ShowVBat(vin)
+					}
 					o.ShowMode(int16(mspinit), int16(mspmode))
 				}
 			}
 
 			if ttick-gtick > GPS_TIMEOUT {
-				println("*** GPS timeout ***")
+				if Debug {
+					println("*** GPS timeout ***")
+				}
 				gtick = ttick
 				o.ClearTime(true)
 				o.ShowGPS(0, 0)
@@ -113,14 +137,18 @@ func main() {
 			}
 
 			if mspinit == msp_INIT_WIP && ttick-mtick > MSP_TIMEOUT {
-				println("*** MSP INIT timeout ***")
+				if Debug {
+					println("*** MSP INIT timeout ***")
+				}
 				mtick = ttick
 				mspinit = msp_INIT_INIT
 			}
 
 			if mspinit == msp_INIT_DONE {
 				if ttick-mtick > NAV_TIMEOUT {
-					println("*** MSP NAV TIMEOUT ***")
+					if Debug {
+						println("*** MSP NAV TIMEOUT ***")
+					}
 					o.INAVReset()
 					mspinit = msp_INIT_INIT
 					mspmode = 0
@@ -135,23 +163,32 @@ func main() {
 				ts := fix.Stamp.Format(GPS_TIME_FORMAT)
 				o.ShowTime(ts)
 				o.ShowGPS(uint16(fix.Sats), fix.Quality)
-				print(ts)
-				print(" [", mspinit, ":", mspmode, "]")
-				println(" Qual: ", fix.Quality, " sats: ", fix.Sats, " lat: ", fix.Lat, " lon: ", fix.Lon)
-				if fix.Quality > 0 && fix.Sats >= GPSMINSAT {
+				if Debug {
+					print(ts)
+					print(" [", mspinit, ":", mspmode, "]")
+					println(" Qual: ", fix.Quality, " sats: ", fix.Sats, " lat: ", FormatF32(fix.Lat, 6), " lon: ", FormatF32(fix.Lon, 6))
+				}
+				if fix.Quality > 0 && fix.Sats >= uint8(MinSat) {
 					if mspinit == msp_INIT_INIT {
-						println("Starting MSP")
+						if Debug {
+							println("Starting MSP")
+						}
 						mspinit = msp_INIT_WIP
 						m.MSPCommand(msp.MSP_FC_VARIANT, nil)
 					} else if mspinit == msp_INIT_DONE {
 						if mspmode == MW_GPS_MODE_HOLD && !(fix.Lat == 0.0 && fix.Lon == 0.0) {
 							c, d := geo.Csedist(msplat, msplon, fix.Lat, fix.Lon)
-							println("Follow (v->u)", msplat, msplon, fix.Lat, fix.Lon, " dist:", int(d), "m", "Brg: ", int(c))
+							if Debug {
+								println("Follow (v->u)", FormatF32(msplat, 6), FormatF32(msplon, 6),
+									FormatF32(fix.Lat, 6), FormatF32(fix.Lon, 6), " dist:", int(d), "m", "Brg:", int(c), "°")
+							}
 							if d > MIN_FOLLOW_DIST {
 								m.Update_WP(FOLLOW_WP, fix.Lat, fix.Lon, uint16(c))
-								println("Vehicle:", c, d)
+								if Debug {
+									println("Vehicle (c,d): ", FormatF32(c, 0), FormatF32(d, 1))
+								}
 								o.ShowINAVPos(uint(d), uint16(c))
-								if RESET_HOME {
+								if ResetHome {
 									m.Update_WP(HOME_WP, fix.Lat, fix.Lon, uint16(c))
 								}
 							}
@@ -170,7 +207,9 @@ func main() {
 				switch v.Cmd {
 				case msp.MSP_FC_VARIANT:
 					vers := string(v.Data[0:4])
-					println("Firmware: ", vers)
+					if Debug {
+						println("Firmware: ", vers)
+					}
 					if vers == "INAV" {
 						m.MSPCommand(msp.MSP_FC_VERSION, nil)
 					}
@@ -181,19 +220,23 @@ func main() {
 					vbuf[2] = v.Data[1] + 48
 					vbuf[3] = '.'
 					vbuf[4] = v.Data[2] + 48
-					println("Version: ", string(vbuf))
+					if Debug {
+						println("Version: ", string(vbuf))
+					}
 					o.ShowINAVVers(string(vbuf))
 					m.MSPCommand(msp.MSP_NAME, nil)
 
 				case msp.MSP_NAME:
-					if v.Len > 0 {
+					if v.Len > 0 && Debug {
 						println("Name: ", string(v.Data))
 					}
 					m.MSPCommand(msp.MSP2_INAV_MIXER, nil)
 
 				case msp.MSP2_INAV_MIXER:
 					ptype := binary.LittleEndian.Uint16(v.Data[3:5])
-					println("Platform type: ", ptype)
+					if Debug {
+						println("Platform type: ", ptype)
+					}
 					if ptype != DONT_FOLLOW_TYPE {
 						mspinit = msp_INIT_DONE
 						mloop = 0
@@ -203,7 +246,9 @@ func main() {
 				case msp.MSP_NAV_STATUS:
 					if mspmode != v.Data[0] {
 						mspmode = v.Data[0]
-						println("nav status: ", mspmode)
+						if Debug {
+							println("nav status: ", mspmode)
+						}
 						if v.Data[0] == 0 {
 							o.ClearRow(oled.OLED_ROW_VPOS, oled.OLED_EXTRA_SPACE)
 						}
@@ -226,9 +271,8 @@ func main() {
 
 					if mloop%10 == 0 {
 						o.ShowINAVSats(uint16(msat), hdop)
-						if mloop%100 == 0 {
-							println("MSP: fix:", mfix, " sats:", msat, " lat:", msplat, " lon:", msplon,
-								" alt:", alt, " spd", spd, " cog: ", cog, " hdop:", hdop)
+						if mloop%100 == 0 && Debug {
+							println("MSP: fix:", mfix, " sats:", msat, " lat:", FormatF32(msplat, 6), " lon:", FormatF32(msplon, 6), " alt:", int(alt), " spd", int(spd), " cog: ", int(cog), " hdop:", hdop)
 						}
 					}
 					if mspinit == msp_INIT_DONE {
@@ -236,11 +280,35 @@ func main() {
 					}
 
 				case msp.MSP_SET_WP:
-					println("set wp ACK")
+					if Debug {
+						println("Got SET_WP ack")
+					}
 				default:
-					println("** msp cmd: ", v.Cmd, " ***")
+					if Debug {
+						println("** msp cmd: ", v.Cmd, " ***")
+					}
 				}
+			}
+		case cl := <-cchan:
+			switch cl.Id {
+			case I_GPSBAUD:
+				GpsBaud = uint32(cl.Value)
+				g.SetBaud(GpsBaud)
+			case I_MSPBAUD:
+				MspBaud = uint32(cl.Value)
+				m.SetBaud(MspBaud)
+			case I_VOFFSET:
+				VBatOffset = float32(cl.Value) / 1000
+				vbat.Offset(VBatOffset)
+			case I_RESETHOME:
+				ResetHome = (cl.Value != 0)
+			case I_NSATS:
+				MinSat = cl.Value
 			}
 		}
 	}
+}
+
+func FormatF32(v float32, np int) string {
+	return strconv.FormatFloat(float64(v), 'f', np, 32)
 }
