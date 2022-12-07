@@ -76,8 +76,7 @@ func main() {
 		Address: 0x3C, VccState: ssd1306.SWITCHCAPVCC})
 	dev.ClearBuffer()
 
-	vbat.VBatInit(USE_VBAT)
-	vbat.Offset(VBatOffset)
+	VBatOffset = vbat.VBatInit(USE_VBAT, VBatOffset)
 
 	o := oled.NewOLED(dev)
 	g := gps.NewGPSUartReader(*uart0, fchan)

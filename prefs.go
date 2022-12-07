@@ -18,7 +18,7 @@ const (
 
 	//  USE_VBAT boolean
 	USE_VBAT = true
-	// For Pico-W at least, you need this, otherwise set to 0.0
+	// For Pico-W you need this; ignored for standard Pico
 	VBAT_OFFSET = 0.8
 
 	// if true, the HOME location will also be set to the follow me location

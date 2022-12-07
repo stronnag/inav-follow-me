@@ -3,12 +3,12 @@ package vbat
 import "machine"
 
 var (
-	Vmode   bool
-	voffset float32
+	Vmode   bool    = false
+	voffset float32 = 0.0
 	vin     machine.ADC
 )
 
-func VBatInit(v_mode bool) {
+func VBatInit(v_mode bool, v_offset float32) float32 {
 	Vmode = v_mode
 	if Vmode {
 		machine.InitADC()
@@ -18,8 +18,10 @@ func VBatInit(v_mode bool) {
 			gp25 := machine.GPIO25
 			gp25.Configure(machine.PinConfig{Mode: machine.PinOutput})
 			gp25.High()
+			voffset = v_offset
 		}
 	}
+	return voffset
 }
 
 func Offset(v_offset float32) {

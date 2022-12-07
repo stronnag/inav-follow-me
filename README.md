@@ -37,8 +37,8 @@ const (
 
 	//  USE_VBAT boolean
     USE_VBAT = true
-	// For Pico-W at least, you need this, otherwise set to 0.0
-    VBAT_OFFSET = 0.8
+	// For Pico-W you need this; ignored for standard Pico
+	VBAT_OFFSET = 0.8
 
 	// if true, the HOME location will also be set to the follow me location
 	RESET_HOME = false
@@ -49,13 +49,70 @@ If the configuration is changed, it is necessary to rebuild / reflash the firmwa
 
 ### Voltage Reporting
 
-The method for reporting voltage differs between the Pico and Pico-W. This is now auto-detected if `USE_VBAT = true` . At least on the developer's Pico-W, an offset (`0.8`V) is also required to display the external (`VSYS` voltage).
+The method for reporting voltage differs between the Pico and Pico-W. This is now auto-detected if `USE_VBAT = true` . At least on the developer's Pico-W, an offset (`0.8`V) is also required to display the external (`VSYS` voltage). For standard Pico, an offset of `0.0` is applied.
 
 In order to have voltage displayed, it is necessary to:
 
 * Set `USE_VBAT` to `true` (default)
-* Set `VBAT_OFFSET` (even to `0.0`)
+* Consider setting `VBAT_OFFSET` (even to `0.0`)
 * Rebuild / reflash the firmware
+
+## CLI
+
+A number of preferences may be changed at runtime using a CLI. When a serial terminal program (`cu`, `minicom`, `picocom`, `tinygo monitor`, `cliterm -n`, `putty` etc.) is connected to the Pico device node (typically `/dev/ttyACM0`), informational data is displayed. This may be paused by pressing the hash key (`#`); a banner `INAV-followme! CLI` and prompt ` #` is then displayed and the user can issue commands. The commands, current value and ranges are shown by the `help` and `list` commands (which do the same thing).
+
+```
+$ cliterm -n
+2022-12-07T09:09:51+0000 Registered serial device: /dev/ttyACM0 [2e8a:000a], Vendor: Raspberry_Pi, Model: Pico, Serial: (null), Driver: cdc_acm
+open /dev/ttyACM0
+09:09:55 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+09:09:56 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+09:09:57 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+09:09:58 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+09:09:59 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+
+INAV-followme! CLI
+
+# list
+gps_baud = 9600 [1200 - 115200]
+msp_baud = 115200 [1200 - 115200]
+vbat_offset = 0.8 [0.0 - 1.8]
+reset_home = false [0/false - 1/true]
+minsats = 6 [3 - 99]
+help
+list
+#
+09:10:05 [1:0] Qual:  0  sats:  0  lat:  0.000000  lon:  0.000000
+```
+
+Values are set as `key = value`, for example:
+
+``` shell
+reset_home = true
+```
+
+### CLI variables
+
+| Key name | Usage |
+| -------- | ----- |
+| `gps_baud` | GPS baud rate, validated (1) |
+| `msp_baud` | MSP baud rate, validated (1) |
+| `vbat_offset` | VBAT voltage offset in the range 0.0 - 1.8V |
+| `reset_home` | Defines whether a RESET HOME (WP#0) update is performed in addition to follow me (WP#255) (2) |
+| `minsats` | The minimum satellite count for follow me / reset home to be asserted |
+
+Note 1: Valid baud rates are 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200.
+
+Note 2: If true, `MSP_SET_WP` for WP#0 is only asserted when the vehicle is in POSHOLD (INAV does not require this, `GCS NAV` is sufficient).
+
+### Control keys
+
+* `#` : Opens CLI
+* `Esc` : Escape key, closes CLI, informational message flow resumes.
+
+### Caveat
+
+Due to limitations of the `Tinygo` SDK, it is not possible to save values set via the CLI.
 
 ## Pico Hardware Connections
 
