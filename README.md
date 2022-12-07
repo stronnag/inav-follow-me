@@ -31,12 +31,12 @@ const (
 	DONT_FOLLOW_TYPE = 1
 	// Don't follow if closer than this distance (m), 0 disables this check
 	MIN_FOLLOW_DIST float32 = 2.0
-    // GPS Time format, either integer seconds or 1 decimal
+    	// GPS Time format, either integer seconds or 1 decimal
 	GPS_TIME_FORMAT = "15:04:05"
 	//GPS_TIME_FORMAT = "15:04:05.0"
 
 	//  USE_VBAT boolean
-    USE_VBAT = true
+	USE_VBAT = true
 	// For Pico-W you need this; ignored for standard Pico
 	VBAT_OFFSET = 0.8
 
