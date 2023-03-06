@@ -1,12 +1,4 @@
 /*
- * Message replay for OS-OTG messages
- * Untainted, based on public domain documentation
- * OS-OTG spec from <http://herbb.hanscom.af.mil/tbbs/R472/OS-OTG_REV_C.pdf>
- * (as linked from NATO's public Technical Architecture site)
- * Note : above resources no longer available, alas
- *
- * $ go build goldplayer.go
- * $ GOOS=windows GOARCH=amd64 go  build goldplayer.go // cross-compile
  */
 
 package main
