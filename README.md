@@ -12,7 +12,7 @@ The RP Pico requires a GPS. An old NMEA capable Neo6M is more than adequate. It 
 
 In theory, "follow me" is available for all  types of INAV vehicle (`platform type`) that supports stationary `POSHOLD`, e.g. MultiRotor and possibly Rover and Boat. By default, fixed wing is excluded, but this can be changed by configuration.
 
-Optionally, a SSD1306 OLED will be supported (once the author's device is delivered).
+Optionally, a SSD1306 OLED is supported.
 
 ## Pico Firmware Configuration
 
